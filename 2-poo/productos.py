@@ -1,44 +1,6 @@
-print(f"{'-'*25} Ejercicios {'-'*25}")
-
-class Producto:
-    def __init__(self, nombre, precio, STOCK):
-        self.nombre = nombre
-        self.precio = precio
-        self.stock = STOCK
+from clases import Producto, ProductoAlimenticio, ProductoElectronico, Tienda
+print(f"{'-'*25} Ejercicios {'-'*25}")     
         
-    def mostrar_info(self):
-        return f"Nombre del producto {self.nombre} --> ${self.precio} ({self.stock} en stock)"
-    
-    def aplicar_descuento(self, porcentaje):
-        desc = self.precio * porcentaje / 100
-        self.precio = self.precio - desc
-    
-    def vender(self, cantidad):
-        if cantidad <= self.stock:
-            self.stock = self.stock - cantidad
-            print(f"{cantidad} productos vendidos")
-        else:
-            print("Error: no hay suficiente stock")
-    
-    def __str__(self):
-        return f"{self.nombre} ${self.precio} {self.stock}"
-
-class ProductoElectronico(Producto):
-    def __init__(self, nombre, precio, stock, garantia):
-        super().__init__(nombre, precio,stock)
-        self.garantia = garantia
-
-    def mostrar_info(self):
-        return f"Producto: {self.nombre}, Precio: {self.precio} (hay {self.stock} - {self.garantia} meses de garantia)"
-
-class ProductoAlimenticio(Producto):
-    def __init__(self, nombre, precio, stock,fecha_vencimiento):
-        super().__init__(nombre,precio,stock)
-        self.fecha_vencimiento = fecha_vencimiento
-        
-    def mostrar_info(self):
-        return f"Producto: {self.nombre}, Precio: {self.precio} (hay {self.stock} - fecha de vencimiento: {self.fecha_vencimiento} )"
-
 producto = Producto("Laptop",700000, 8)
 producto_2 = Producto(nombre = "Teclado", STOCK=10, precio= 20000)
 print(producto)
@@ -52,3 +14,44 @@ producto_el_1 = ProductoElectronico("Reloj inteligente", 200000, 10, 6)
 print(producto_el_1.mostrar_info())
 producto_al_1= ProductoAlimenticio("Pan",1000, 20, "28/08/2026")
 print(producto_al_1.mostrar_info())
+
+print(f"{'-'*25} 1.3 {'-'*25}")
+producto_al_1.aumentar_stock(6)
+print(producto_al_1.mostrar_info())
+producto_al_1.vender(8)
+print(producto_al_1.mostrar_info())
+print(f"Stock disponible: {producto_al_1.consultar_stock()}")
+
+print(f"{'-'*25} 1.4 {'-'*25}")
+productos = [producto_al_1, producto_el_1, producto, producto_2]
+print(productos)
+for producto_ in productos:
+    print(producto_.mostrar_info())
+    
+productos = [ProductoElectronico("Reloj Inteligente", 2000000, 10, 3),
+             ProductoAlimenticio("Pan", 1000, 10,"28/09/2026")
+             ]
+for producto_ in productos:
+    print(producto_.mostrar_info())
+    
+print("Tienda de productos")
+tienda = Tienda("Supermarket express")
+tienda.mostrar_catalogo()
+
+producto1= Producto("Cuaderno", 2500, 50)
+producto2 = ProductoElectronico("Laptop", 700000, 5, 12)
+producto3 = ProductoAlimenticio("Leche", 1200, 20, "10/09/2026")
+tienda.mostrar_catalogo()
+tienda.agregar_productos(producto1)
+tienda.agregar_productos(producto2)
+tienda.agregar_productos(producto3)
+tienda.mostrar_catalogo()
+
+#tienda.agregar_productos("producto 1")
+# Funciones para verificar los tipos de datos
+# print(isinstance("producto 1", str))
+# print(isinstance("producto 1", int))
+# print(isinstance(producto1, Producto))
+tienda.agregar_productos("adsd")
+tienda.buscar_producto("Leche")
+tienda.buscar_producto("Leche Entera")
