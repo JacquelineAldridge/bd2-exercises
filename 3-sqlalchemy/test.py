@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, create_engine, select
+from sqlalchemy import Integer, String, create_engine, select, update
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 class Base(DeclarativeBase):
@@ -109,5 +109,38 @@ with Session() as session:
     print(f"{'-'*25} Recuperar el registro con ID 2 {'-'*25}")  
     query = session.get(Producto, 2) # recuperar por clave primaria
     print(query)
+    
+    print(f"{'-'*25} Actualizar registros {'-'*25}")
+    polera = session.get(Producto, 12)
+    print(polera)
+    polera.precio = polera.precio * 1.2 
+    session.add(polera)
+    session.commit()
+    polera_actulizada = session.get(Producto, 12)
+    print(polera_actulizada)
+    
+    query  = (
+        update(Producto)
+        .where(Producto.nombre == "Botella")
+        .values(precio = 12345)
+    )
+    print(query)
+    session.execute(query)
+    session.commit()
+    
+    query = (
+        update(Producto)
+        .values(precio = Producto.precio * 5)
+    )
+    session.execute(query)
+    session.commit()
+    
+    print(f"{'-'*25} Eliminar registros {'-'*25}")
+    
+    lapiz = session.get(Producto, 10)
+    session.delete(lapiz)
+    session.commit()  
+    
+    
     
     
