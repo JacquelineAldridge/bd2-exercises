@@ -4,6 +4,11 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship,
 class Base(DeclarativeBase):
     pass
 
+class ProductoProveedores(Base):
+    __tablename__ = "productos_proveedores"
+    producto_id: Mapped[int] = mapped_column(ForeignKey("productos.id"), primary_key=True)
+    proveedor_id: Mapped[int] = mapped_column(ForeignKey("proveedores.id"), primary_key=True)
+        
 class Producto(Base):
     __tablename__ = "productos"
     
@@ -15,10 +20,10 @@ class Producto(Base):
     #categoria: Mapped[str] = mapped_column(String)
         
     # Relaciones
-    detalle: Mapped["DetalleProducto"] = relationship(back_populates="producto", uselist=False)
+    detalle: Mapped["DetalleProducto"] = relationship(back_populates="producto", uselist=False, cascade = "all, delete-orphan")
     categoria_id: Mapped[int] = mapped_column(ForeignKey("categorias.id"))
     categoria: Mapped["Categoria"] = relationship(back_populates="productos") 
-    
+    proveedores: Mapped[list["Proveedor"]] = relationship(back_populates="productos", secondary = "productos_proveedores")
     
     def __str__(self):
         return f"{self.nombre}: {self.precio} ({self.stock} en stock)"
@@ -47,7 +52,26 @@ class Categoria(Base):
     # Relaciones
     productos: Mapped[list["Producto"]] = relationship(back_populates="categoria")
     
+class Proveedor(Base):
+    __tablename__ = "proveedores"
     
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(100))
+    direccion:  Mapped[str] = mapped_column(String(150))
+    email: Mapped[str] = mapped_column(String(100), unique= True)
+    
+    # Relaciones
+    productos: Mapped[list["Producto"]] = relationship(back_populates="proveedores", secondary = "productos_proveedores")
+    
+proveedor_1 = Proveedor(nombre = "Tech Supply", direccion="Av. Providencia 1234", email="contacto@tech.cl")
+proveedor_2 = Proveedor(
+    nombre="Importadora Digital",    direccion="Calle Falsa 456",    email="ventas@importadora.cl")
+
+proveedor_3 = Proveedor(
+    nombre="Distribuidora Gamer",     direccion="Av. Las Condes 7890",
+    email="info@gamer.cl"
+)
+
 DB_URI = "sqlite:///productos_relaciones.sqlite3"
 engine = create_engine(DB_URI)
 
@@ -102,6 +126,7 @@ with Session() as session:
     session.add_all(productos)
     session.add_all(detalles)
     session.add_all(categorias)
+    session.add_all([proveedor_1,proveedor_2, proveedor_3])
     session.commit()
     
     detalle_1 = session.get(DetalleProducto, 1)
@@ -111,4 +136,18 @@ with Session() as session:
     productos = session.execute(select(Producto)).scalars().all()
     for producto in productos:
         print(f"{producto.nombre} --> {producto.categoria.nombre} (lote: {producto.detalle.lote})")
+        
+    p1.proveedores = [proveedor_1]
+    p2.proveedores = [proveedor_3, proveedor_2]
+    session.commit()
+    
+    p2.proveedores = []
+    #p1.proveedores.clear()
+    session.commit()
+    
+    print(f"{'-'*25}")
+    producto_1 = session.get(Producto, 1)
+    print(producto_1)
+    session.delete(producto_1)
+    session.commit()
 
