@@ -1,19 +1,25 @@
 
 # API
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import selectinload, sessionmaker
 
-from modelos import Categoria, Producto, Proveedor
-from schemas import ProductoCreate, ProductoUpdate, CategoriaCreate, ProveedorCreate
+from modelos import Categoria, Producto, Proveedor, Usuario
+from schemas import ProductoCreate, ProductoUpdate, CategoriaCreate, ProveedorCreate, UsuarioCreate
+from security import crear_hash_password, verificar_password
 
 engine = create_engine("postgresql+psycopg:///productos")
-
+        # sqlite:///productos.sqlite3
+# from modelos import Base
+# Base.metadata.create_all(engine)
 app = FastAPI()
 Session = sessionmaker(engine)
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
 @app.get("/productos", status_code=200, tags=["Productos"])
-def listar_productos():
+def listar_productos(token: str = Depends(oauth2_scheme)):
     with Session() as session:
         productos = session.execute(select(Producto)
                                     .options(selectinload(Producto.proveedores))
@@ -107,6 +113,36 @@ def listar_proveedores():
     with Session() as session:
         categorias = session.execute(select(Proveedor)).scalars().all()
         return categorias
-
+# Usuarios
+@app.post("/usuarios", status_code=201, tags=["Usuarios"])
+def insertar_usuario(usuario: UsuarioCreate):
+    with Session() as session:
+        nuevo_usuario = Usuario(**usuario.model_dump(exclude="password"))
+        nuevo_usuario.hashed_password = crear_hash_password(usuario.password)
+        session.add(nuevo_usuario)
+        session.commit()
+        session.refresh(nuevo_usuario)
+        return nuevo_usuario
     
-    
+# uv add "pwdlib[argon2]" pyjwt
+@app.get("/usuarios", tags=["Usuarios"])
+def listar_usuarios( ):
+     with Session() as session:
+        usuarios = session.execute(select(Usuario)).scalars().all()
+        return usuarios
+@app.post("/login")
+def login(credenciales_usuario: OAuth2PasswordRequestForm = Depends()):
+    with Session() as session:
+        usuario = (session.execute(
+            select(Usuario)
+            .where(Usuario.username == credenciales_usuario.username))
+        ).scalar_one_or_none()
+        if not usuario:
+            raise HTTPException(status_code = 404, detail="No valido")
+        
+        if not verificar_password(credenciales_usuario.password, usuario.hashed_password):
+            raise HTTPException(status_code=401, detail= "Usuario o contraseña incorrecta")
+        
+        return {"mensaje":" Login exitoso"}
+        
+                   

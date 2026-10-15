@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic import EmailStr
 
 class ProductoCreate(BaseModel):
     nombre: str
@@ -19,3 +20,10 @@ class ProveedorCreate(BaseModel):
     direccion: str
     email: str
     
+class UsuarioCreate(BaseModel):
+    username: str 
+    email: EmailStr
+    password: str 
+    fullname: str
+    
+    is_superuser:  bool | None = None
