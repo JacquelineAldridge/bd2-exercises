@@ -1,5 +1,7 @@
 
 # API
+from datetime import timedelta
+
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import create_engine, select
@@ -7,7 +9,7 @@ from sqlalchemy.orm import selectinload, sessionmaker
 
 from modelos import Categoria, Producto, Proveedor, Usuario
 from schemas import ProductoCreate, ProductoUpdate, CategoriaCreate, ProveedorCreate, UsuarioCreate
-from security import crear_hash_password, verificar_password
+from security import crear_access_token, crear_hash_password, verificar_password, verificar_token
 
 engine = create_engine("postgresql+psycopg:///productos")
         # sqlite:///productos.sqlite3
@@ -18,8 +20,37 @@ Session = sessionmaker(engine)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
+# Usuarios
+def obtener_usuario_actual(token: str = Depends(oauth2_scheme)):
+        with Session() as session:
+            payload = verificar_token(token)
+            if payload is None:
+                raise HTTPException(status_code=401, detail="Token inválido")
+            
+            username = payload.get("sub")
+            if username is None:
+                raise HTTPException(status_code=401, datail="Datos inválidos")
+            
+            usuario = session.execute(
+                select(Usuario)
+                .where(Usuario.username == username)
+            ).scalar_one_or_none()
+            
+            return usuario
+
+def obtener_usuario_admin(
+    usuario_actual: Usuario = Depends(obtener_usuario_actual)
+) -> Usuario:
+    if not usuario_actual.is_superuser:
+        raise HTTPException(
+	            status_code=403,
+            detail="Se requieren permisos de administrador",
+        )
+    return usuario_actual
+    
+# Productos
 @app.get("/productos", status_code=200, tags=["Productos"])
-def listar_productos(token: str = Depends(oauth2_scheme)):
+def listar_productos(usuario = Depends(obtener_usuario_actual)): 
     with Session() as session:
         productos = session.execute(select(Producto)
                                     .options(selectinload(Producto.proveedores))
@@ -50,7 +81,7 @@ def obtener_producto(producto_id: int):
         return producto
 
 @app.delete("/productos/{id}", status_code=204, tags=["Productos"])
-def eliminar_producto(id: int):
+def eliminar_producto(id: int, admin = Depends(obtener_usuario_admin)):
     with Session() as session:
         producto = session.get(Producto, id)
         if not producto:
@@ -143,6 +174,10 @@ def login(credenciales_usuario: OAuth2PasswordRequestForm = Depends()):
         if not verificar_password(credenciales_usuario.password, usuario.hashed_password):
             raise HTTPException(status_code=401, detail= "Usuario o contraseña incorrecta")
         
-        return {"mensaje":" Login exitoso"}
+        data_user = {"sub":usuario.username, "id":usuario.id}
+        access_token_expires = timedelta(minutes=1)
+        access_token = crear_access_token(data=data_user, expires_delta = access_token_expires)
+        return {"access_token": access_token, "token_type":"bearer"}
+        #return {"mensaje":" Login exitoso"}
         
                    
